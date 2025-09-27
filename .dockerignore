@@ -1,0 +1,52 @@
+# Ignore model files in Docker builds (downloaded at runtime)
+models/
+*.tflite
+*.onnx
+*.pt
+*.pth
+*.h5
+*.pkl
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+.git/
+
+# Test and temporary files
+test_images/
+temp/
+uploads/
+*.log
+
+# Development files
+.env
+.env.local
+local_config.py
+
+# Documentation
+*.md
+docs/
+
+# Git files
+.gitignore
+.gitattributes
+
+# CI/CD files
+.github/

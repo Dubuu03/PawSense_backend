@@ -1,0 +1,1 @@
+# FastAPI YOLO Detection Application

@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+ultralytics
+Pillow
+PyYAML
+python-multipart
+numpy
+opencv-python
+torch
+torchvision
+tensorflow
+requests

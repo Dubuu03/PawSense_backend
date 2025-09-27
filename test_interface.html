@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO Detection Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .upload-section {
+            border: 2px dashed #ddd;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .upload-section:hover {
+            border-color: #007bff;
+            background: #f0f8ff;
+        }
+        input[type="file"] {
+            margin: 10px;
+            padding: 8px;
+        }
+        .model-selector {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .model-selector label {
+            margin: 0 15px;
+            cursor: pointer;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+        .detection-item {
+            background: white;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #155724;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        .image-container {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+        }
+        .detection-image {
+            max-width: 100%;
+            max-height: 500px;
+            display: block;
+        }
+        .bounding-box {
+            position: absolute;
+            border: 3px solid #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+            pointer-events: none;
+        }
+        .detection-label {
+            position: absolute;
+            background: #ff4444;
+            color: white;
+            padding: 2px 6px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 3px;
+            white-space: nowrap;
+        }
+        .image-info {
+            text-align: center;
+            margin: 10px 0;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐱🐶 YOLO Detection Tester</h1>
+        
+        <div class="upload-section">
+            <h3>Upload Your Image</h3>
+            <p>Select an image file to test skin condition detection</p>
+            <input type="file" id="imageFile" accept="image/*" />
+        </div>
+        
+        <div class="model-selector">
+            <h4>Choose Model:</h4>
+            <label>
+                <input type="radio" name="model" value="cats" checked /> 
+                🐱 Cats Model
+            </label>
+            <label>
+                <input type="radio" name="model" value="dogs" /> 
+                🐶 Dogs Model
+            </label>
+        </div>
+        
+        <div style="text-align: center;">
+            <button onclick="uploadImage()" id="uploadBtn">
+                🔍 Detect Conditions
+            </button>
+            <button onclick="clearResults()">
+                🗑️ Clear Results
+            </button>
+        </div>
+        
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        function getSelectedModel() {
+            const radios = document.getElementsByName('model');
+            for (let radio of radios) {
+                if (radio.checked) {
+                    return radio.value;
+                }
+            }
+            return 'cats';
+        }
+
+        async function uploadImage() {
+            const fileInput = document.getElementById('imageFile');
+            const file = fileInput.files[0];
+            const resultsDiv = document.getElementById('results');
+            const uploadBtn = document.getElementById('uploadBtn');
+            
+            if (!file) {
+                showError('Please select an image file first!');
+                return;
+            }
+            
+            const model = getSelectedModel();
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // Show loading
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = '🔄 Detecting...';
+            resultsDiv.innerHTML = '<div class="loading">🔄 Processing your image...</div>';
+            resultsDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch(`http://localhost:8000/detect/${model}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResults(result);
+                } else {
+                    showError(`Error: ${result.error || 'Unknown error occurred'}`);
+                }
+            } catch (error) {
+                showError(`Connection error: ${error.message}. Make sure the server is running on http://localhost:8000`);
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = '🔍 Detect Conditions';
+            }
+        }
+        
+        function showResults(result) {
+            const resultsDiv = document.getElementById('results');
+            
+            let html = `
+                <div class="success">
+                    ✅ Detection completed successfully!
+                </div>
+                <h4>📊 Results for: ${result.filename}</h4>
+                <p><strong>Total detections:</strong> ${result.total_detections}</p>
+            `;
+
+            // Add image with bounding boxes
+            html += '<div id="imageVisualization"></div>';
+            
+            if (result.detections && result.detections.length > 0) {
+                html += '<h4>🔍 Detections Found:</h4>';
+                
+                result.detections.forEach((detection, index) => {
+                    const confidence = (detection.confidence * 100).toFixed(1);
+                    const color = getDetectionColor(index);
+                    html += `
+                        <div class="detection-item" style="border-left-color: ${color};">
+                            <div style="display: flex; align-items: center;">
+                                <div style="width: 20px; height: 20px; background: ${color}; margin-right: 10px; border-radius: 3px;"></div>
+                                <div>
+                                    <strong>${index + 1}. ${detection.label}</strong>
+                                    <br>Confidence: ${confidence}%
+                                    <br>Bounding Box: [${detection.bbox.map(b => b.toFixed(1)).join(', ')}]
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                html += '<p>ℹ️ No skin conditions detected in this image.</p>';
+            }
+            
+            // Add model info
+            html += `
+                <details style="margin-top: 20px;">
+                    <summary><strong>📋 Model Information</strong></summary>
+                    <pre style="background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; font-size: 12px;">
+${JSON.stringify(result.model_info, null, 2)}
+                    </pre>
+                </details>
+            `;
+            
+            resultsDiv.innerHTML = html;
+            resultsDiv.style.display = 'block';
+            
+            // Draw image with bounding boxes
+            drawImageWithBoundingBoxes(result);
+        }
+
+        function getDetectionColor(index) {
+            const colors = [
+                '#ff4444', '#44ff44', '#4444ff', '#ffaa44', 
+                '#ff44aa', '#44aaff', '#aaff44', '#aa44ff',
+                '#ffaa88', '#88ffaa', '#aa88ff', '#ff8844'
+            ];
+            return colors[index % colors.length];
+        }
+
+        function drawImageWithBoundingBoxes(result) {
+            const fileInput = document.getElementById('imageFile');
+            const file = fileInput.files[0];
+            
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // Create container
+                    const container = document.createElement('div');
+                    container.className = 'image-container';
+                    container.style.position = 'relative';
+                    
+                    // Create image element
+                    const imageElement = document.createElement('img');
+                    imageElement.src = e.target.result;
+                    imageElement.className = 'detection-image';
+                    imageElement.style.display = 'block';
+                    
+                    container.appendChild(imageElement);
+                    
+                    // Wait for image to render, then draw bounding boxes
+                    imageElement.onload = function() {
+                        const imgRect = imageElement.getBoundingClientRect();
+                        const containerRect = container.getBoundingClientRect();
+                        
+                        // Calculate scale factors
+                        const scaleX = imageElement.offsetWidth / img.naturalWidth;
+                        const scaleY = imageElement.offsetHeight / img.naturalHeight;
+                        
+                        // Draw bounding boxes
+                        result.detections.forEach((detection, index) => {
+                            const [x1, y1, x2, y2] = detection.bbox;
+                            const color = getDetectionColor(index);
+                            
+                            // Create bounding box
+                            const bbox = document.createElement('div');
+                            bbox.className = 'bounding-box';
+                            bbox.style.left = (x1 * scaleX) + 'px';
+                            bbox.style.top = (y1 * scaleY) + 'px';
+                            bbox.style.width = ((x2 - x1) * scaleX) + 'px';
+                            bbox.style.height = ((y2 - y1) * scaleY) + 'px';
+                            bbox.style.borderColor = color;
+                            bbox.style.backgroundColor = color + '20'; // Add transparency
+                            
+                            // Create label
+                            const label = document.createElement('div');
+                            label.className = 'detection-label';
+                            label.style.backgroundColor = color;
+                            label.style.left = (x1 * scaleX) + 'px';
+                            label.style.top = (y1 * scaleY - 25) + 'px';
+                            label.textContent = `${detection.label} (${(detection.confidence * 100).toFixed(1)}%)`;
+                            
+                            container.appendChild(bbox);
+                            container.appendChild(label);
+                        });
+                    };
+                    
+                    // Add image info
+                    const imageInfo = document.createElement('div');
+                    imageInfo.className = 'image-info';
+                    imageInfo.innerHTML = `
+                        📏 Image Size: ${img.naturalWidth} × ${img.naturalHeight} pixels<br>
+                        📊 Detections: ${result.total_detections} found
+                    `;
+                    
+                    // Insert into visualization area
+                    const vizArea = document.getElementById('imageVisualization');
+                    vizArea.innerHTML = '';
+                    vizArea.appendChild(container);
+                    vizArea.appendChild(imageInfo);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function showError(message) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `<div class="error">❌ ${message}</div>`;
+            resultsDiv.style.display = 'block';
+        }
+        
+        function clearResults() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.style.display = 'none';
+            document.getElementById('imageFile').value = '';
+        }
+        
+        // Allow drag and drop
+        const uploadSection = document.querySelector('.upload-section');
+        
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.style.borderColor = '#007bff';
+            uploadSection.style.background = '#f0f8ff';
+        });
+        
+        uploadSection.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadSection.style.borderColor = '#ddd';
+            uploadSection.style.background = '#fafafa';
+        });
+        
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.style.borderColor = '#ddd';
+            uploadSection.style.background = '#fafafa';
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('imageFile').files = files;
+            }
+        });
+    </script>
+</body>
+</html>
