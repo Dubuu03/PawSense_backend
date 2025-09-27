@@ -27,5 +27,5 @@ ENV PYTHONUNBUFFERED=1
 # Expose port
 EXPOSE 8000
 
-# Use python -m to ensure proper module resolution
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use Python startup script that handles environment variables
+CMD ["python", "start_server.py"]
