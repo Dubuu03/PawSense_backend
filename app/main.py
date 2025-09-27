@@ -45,15 +45,10 @@ def create_app() -> FastAPI:
     # Startup event
     @app.on_event("startup")
     async def startup_event():
-        """Initialize models on startup"""
-        try:
-            print("🚀 Starting YOLO Detection API...")
-            print("📦 Initializing models...")
-            model_service.initialize_all_models()
-            print("✅ All models loaded successfully!")
-        except Exception as e:
-            print(f"⚠️ Warning: Could not pre-load models: {e}")
-            print("🔄 Models will be loaded on first request.")
+        """Initialize application on startup"""
+        print("🚀 Starting YOLO Detection API...")
+        print("� Models will be downloaded on first request...")
+        print("✅ Server ready to accept requests!")
     
     # Shutdown event
     @app.on_event("shutdown")

@@ -26,11 +26,22 @@ class MainController:
     @staticmethod
     def health_check() -> HealthResponse:
         """Health check endpoint"""
-        return HealthResponse(
-            status="healthy",
-            models_loaded=model_service.get_loaded_models(),
-            available_models=model_service.get_available_models()
-        )
+        try:
+            # Quick health check without model loading
+            models_loaded = list(model_service.models_cache.keys()) if hasattr(model_service, 'models_cache') else []
+            available_models = list(model_service.hf_urls.keys()) if hasattr(model_service, 'hf_urls') else ["cats", "dogs"]
+            
+            return HealthResponse(
+                status="healthy",
+                models_loaded=models_loaded,
+                available_models=available_models
+            )
+        except Exception as e:
+            return HealthResponse(
+                status="unhealthy",
+                models_loaded=[],
+                available_models=["cats", "dogs"]
+            )
 
 
 # Controller instance
