@@ -10,3 +10,4 @@ torch
 torchvision
 tensorflow
 requests
+python-dotenv

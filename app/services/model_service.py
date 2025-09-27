@@ -23,22 +23,11 @@ class ModelService:
         self.labels_cache = {}
         self.metadata_cache = {}
         
-        # Model configurations from config
-        self.model_configs = config.MODEL_CONFIGS
+        # Hugging Face URLs from config
+        self.hf_urls = config.HF_URLS
         
-        # Hugging Face URLs for models
-        self.hf_urls = {
-            'cats': {
-                'model': 'https://huggingface.co/crishelpc/cat-detection-yolo/resolve/main/cat_best.tflite',
-                'labels': 'https://huggingface.co/crishelpc/cat-detection-yolo/resolve/main/labels.json',
-                'metadata': 'https://huggingface.co/crishelpc/cat-detection-yolo/resolve/main/metadata.yaml'
-            },
-            'dogs': {
-                'model': 'https://huggingface.co/crishelpc/dogs-detection-yolo/resolve/main/dog_best.tflite',
-                'labels': 'https://huggingface.co/crishelpc/dogs-detection-yolo/resolve/main/labels.json',
-                'metadata': 'https://huggingface.co/crishelpc/dogs-detection-yolo/resolve/main/metadata.yaml'
-            }
-        }
+        # Download timeout from config
+        self.download_timeout = config.MODEL_DOWNLOAD_TIMEOUT
     
     def download_file(self, url: str) -> str:
         """
@@ -51,7 +40,7 @@ class ModelService:
             Path to downloaded file
         """
         try:
-            response = requests.get(url, timeout=30)
+            response = requests.get(url, timeout=self.download_timeout)
             response.raise_for_status()
             
             # Create temporary file with appropriate extension
