@@ -160,12 +160,42 @@ class DetectionService:
                     if confidence < 0.25:  # Lowered threshold for testing
                         continue
                     
-                    # Convert normalized coordinates to pixel coordinates
+                    # Debug: Print raw coordinate values
+                    print(f"🔍 Raw coords: x_center={x_center:.4f}, y_center={y_center:.4f}, w={box_width:.4f}, h={box_height:.4f}")
+                    
                     img_width, img_height = image.size
-                    x1 = (x_center - box_width / 2) * img_width
-                    y1 = (y_center - box_height / 2) * img_height
-                    x2 = (x_center + box_width / 2) * img_width
-                    y2 = (y_center + box_height / 2) * img_height
+                    model_size = 640  # YOLO v8 input size
+                    
+                    # Method 1: Direct scaling (assuming normalized [0-1] coordinates)
+                    method1_x1 = (x_center - box_width / 2) * img_width
+                    method1_y1 = (y_center - box_height / 2) * img_height
+                    method1_x2 = (x_center + box_width / 2) * img_width
+                    method1_y2 = (y_center + box_height / 2) * img_height
+                    
+                    # Method 2: Scale through model size (640x640)
+                    method2_x1 = (x_center - box_width / 2) * model_size * (img_width / model_size)
+                    method2_y1 = (y_center - box_height / 2) * model_size * (img_height / model_size)
+                    method2_x2 = (x_center + box_width / 2) * model_size * (img_width / model_size)
+                    method2_y2 = (y_center + box_height / 2) * model_size * (img_height / model_size)
+                    
+                    # Method 3: Check if coordinates are already in pixel space relative to 640x640
+                    if x_center > 1.0 or y_center > 1.0:  # Already in pixel coordinates
+                        # Scale from 640x640 to actual image size
+                        scale_x = img_width / model_size
+                        scale_y = img_height / model_size
+                        x1 = (x_center - box_width / 2) * scale_x
+                        y1 = (y_center - box_height / 2) * scale_y
+                        x2 = (x_center + box_width / 2) * scale_x
+                        y2 = (y_center + box_height / 2) * scale_y
+                        print(f"📐 Using Method 3 (pixel coords): bbox=[{x1:.1f}, {y1:.1f}, {x2:.1f}, {y2:.1f}]")
+                    else:  # Normalized coordinates [0-1]
+                        # Use Method 1: direct scaling
+                        x1, y1, x2, y2 = method1_x1, method1_y1, method1_x2, method1_y2
+                        print(f"📐 Using Method 1 (normalized): bbox=[{x1:.1f}, {y1:.1f}, {x2:.1f}, {y2:.1f}]")
+                    
+                    print(f"🔄 Method comparison:")
+                    print(f"   Method 1: [{method1_x1:.1f}, {method1_y1:.1f}, {method1_x2:.1f}, {method1_y2:.1f}]")
+                    print(f"   Method 2: [{method2_x1:.1f}, {method2_y1:.1f}, {method2_x2:.1f}, {method2_y2:.1f}]")
                     
                     # Clamp coordinates to image bounds
                     x1 = max(0, min(x1, img_width))
