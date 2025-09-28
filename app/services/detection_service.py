@@ -3,11 +3,18 @@ Detection service for running TensorFlow Lite inference
 """
 
 import io
+import os
 import numpy as np
 from typing import List, Dict, Any
 from PIL import Image
 from fastapi import HTTPException, UploadFile
-import tflite_runtime.interpreter as tflite
+
+try:
+    import tflite_runtime.interpreter as tflite
+except ImportError:
+    # Fallback to TensorFlow Lite from full TensorFlow
+    import tensorflow as tf
+    tflite = tf.lite
 
 from app.models.schemas import Detection, DetectionResponse, ModelInfo
 from app.services.model_service import model_service
@@ -21,24 +28,57 @@ class DetectionService:
     def validate_image(file: UploadFile) -> None:
         """
         Validate uploaded image file
-        
         Args:
             file: Uploaded file object
         """
-        # Check file type
-        if file.content_type not in config.ALLOWED_FILE_TYPES:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Invalid file type. Allowed types: {', '.join(config.ALLOWED_FILE_TYPES)}"
-            )
+        print(f"🔍 Validating file: {file.filename}")
+        print(f"📄 Content-Type received: '{file.content_type}'")
+        print(f"📋 Allowed types from config: {config.ALLOWED_FILE_TYPES}")
         
+        # Normalize MIME type
+        content_type = (file.content_type or '').lower().strip()
+        allowed_types = [t.lower().strip() for t in config.ALLOWED_FILE_TYPES]
+        
+        print(f"📄 Normalized content-type: '{content_type}'")
+        print(f"📋 Normalized allowed types: {allowed_types}")
+        
+        # Accept common variants
+        extra_types = ['image/pjpeg', 'image/x-png', 'image/x-bmp', 'image/gif', 'image/webp']
+        allowed_types += extra_types
+        
+        # Check file type
+        is_valid_type = content_type in allowed_types
+        print(f"✅ Type validation result: {is_valid_type}")
+        
+        if not is_valid_type:
+            # Fallback: check file extension
+            import os
+            ext = os.path.splitext(file.filename or '')[1].lower()
+            allowed_exts = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif', '.webp']
+            is_valid_ext = ext in allowed_exts
+            
+            print(f"📁 File extension: '{ext}'")
+            print(f"📋 Allowed extensions: {allowed_exts}")
+            print(f"✅ Extension validation result: {is_valid_ext}")
+            
+            if not is_valid_ext:
+                print(f"❌ File validation failed for: {file.filename}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid file type. Allowed types: {config.ALLOWED_FILE_TYPES}"
+                )
+            else:
+                print(f"✅ File accepted via extension fallback")
+        else:
+            print(f"✅ File accepted via content-type")
+            
         # Check file size
         if hasattr(file, 'size') and file.size and file.size > config.MAX_FILE_SIZE:
             max_size_mb = config.MAX_FILE_SIZE / (1024 * 1024)
             raise HTTPException(status_code=400, detail=f"File size too large. Maximum {max_size_mb}MB allowed.")
     
     @staticmethod
-    def run_inference(interpreter: tflite.Interpreter, image: Image.Image, labels: Dict[int, str]) -> List[Detection]:
+    def run_inference(interpreter, image: Image.Image, labels: Dict[int, str]) -> List[Detection]:
         """
         Run TensorFlow Lite inference on an image and format results
         
