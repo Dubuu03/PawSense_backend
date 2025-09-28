@@ -1,12 +1,13 @@
 """
-Detection service for running YOLO inference
+Detection service for running TensorFlow Lite inference
 """
 
 import io
+import numpy as np
 from typing import List, Dict, Any
 from PIL import Image
 from fastapi import HTTPException, UploadFile
-from ultralytics import YOLO
+import tensorflow as tf
 
 from app.models.schemas import Detection, DetectionResponse, ModelInfo
 from app.services.model_service import model_service
@@ -37,12 +38,12 @@ class DetectionService:
             raise HTTPException(status_code=400, detail=f"File size too large. Maximum {max_size_mb}MB allowed.")
     
     @staticmethod
-    def run_inference(model: YOLO, image: Image.Image, labels: Dict[int, str]) -> List[Detection]:
+    def run_inference(interpreter: tf.lite.Interpreter, image: Image.Image, labels: Dict[int, str]) -> List[Detection]:
         """
-        Run YOLO inference on an image and format results
+        Run TensorFlow Lite inference on an image and format results
         
         Args:
-            model: Loaded YOLO model
+            interpreter: Loaded TensorFlow Lite interpreter
             image: PIL Image object
             labels: Dictionary mapping class IDs to label names
             
@@ -50,33 +51,65 @@ class DetectionService:
             List of Detection objects
         """
         try:
+            # Get input and output details
+            input_details = interpreter.get_input_details()
+            output_details = interpreter.get_output_details()
+            
+            # Get input shape
+            input_shape = input_details[0]['shape']
+            height, width = input_shape[1], input_shape[2]
+            
+            # Preprocess image
+            image_resized = image.resize((width, height))
+            image_rgb = image_resized.convert('RGB')
+            input_data = np.array(image_rgb, dtype=np.float32)
+            
+            # Normalize to [0, 1] if needed
+            if input_details[0]['dtype'] == np.float32:
+                input_data = input_data / 255.0
+                
+            # Add batch dimension
+            input_data = np.expand_dims(input_data, axis=0)
+            
+            # Set input tensor
+            interpreter.set_tensor(input_details[0]['index'], input_data)
+            
             # Run inference
-            results = model(image)
+            interpreter.invoke()
+            
+            # Get output tensors
+            # Assuming YOLO output format: [batch, detections, 6] where 6 = [x, y, w, h, conf, class]
+            output_data = interpreter.get_tensor(output_details[0]['index'])
             
             detections = []
             
-            # Process each detection
-            for result in results:
-                if result.boxes is not None:
-                    boxes = result.boxes
+            # Process detections
+            for detection in output_data[0]:  # Remove batch dimension
+                if len(detection) >= 6:
+                    x_center, y_center, w, h, confidence, class_id = detection[:6]
                     
-                    for i in range(len(boxes)):
-                        # Get detection data
-                        bbox = boxes.xyxy[i].cpu().numpy().tolist()  # [x1, y1, x2, y2]
-                        confidence = float(boxes.conf[i].cpu().numpy())
-                        class_id = int(boxes.cls[i].cpu().numpy())
-                        
-                        # Get label name
-                        label = labels.get(class_id, f"Unknown_{class_id}")
-                        
-                        detection = Detection(
-                            class_id=class_id,
-                            label=label,
-                            confidence=round(confidence, 4),
-                            bbox=[round(coord, 2) for coord in bbox]
-                        )
-                        
-                        detections.append(detection)
+                    # Skip low confidence detections
+                    if confidence < 0.5:
+                        continue
+                    
+                    # Convert from center format to corner format
+                    x1 = (x_center - w/2) * image.width
+                    y1 = (y_center - h/2) * image.height
+                    x2 = (x_center + w/2) * image.width
+                    y2 = (y_center + h/2) * image.height
+                    
+                    # Get label name
+                    class_id = int(class_id)
+                    label = labels.get(class_id, f"Unknown_{class_id}")
+                    
+                    detection_obj = Detection(
+                        class_id=class_id,
+                        label=label,
+                        confidence=round(float(confidence), 4),
+                        bbox=[round(x1, 2), round(y1, 2), round(x2, 2), round(y2, 2)]
+                    )
+                    
+                    detections.append(detection_obj)
             
             return detections
         

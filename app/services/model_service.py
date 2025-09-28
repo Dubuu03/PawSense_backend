@@ -7,16 +7,17 @@ import yaml
 import os
 import tempfile
 import requests
+import numpy as np
 from typing import Dict, Any
 from fastapi import HTTPException
-from ultralytics import YOLO
+import tensorflow as tf
 from pathlib import Path
 
 from app.utils.config import config
 
 
 class ModelService:
-    """Service for managing YOLO models and their metadata"""
+    """Service for managing TensorFlow Lite models and their metadata"""
     
     def __init__(self):
         self.models_cache = {}
@@ -131,15 +132,15 @@ class ModelService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error loading metadata: {str(e)}")
     
-    def load_model(self, model_type: str) -> YOLO:
+    def load_model(self, model_type: str) -> tf.lite.Interpreter:
         """
-        Load YOLO model from Hugging Face .tflite file
+        Load TensorFlow Lite model from Hugging Face .tflite file
         
         Args:
             model_type: Either 'cats' or 'dogs'
             
         Returns:
-            Loaded YOLO model
+            Loaded TensorFlow Lite interpreter
         """
         try:
             # Check cache first
@@ -150,12 +151,14 @@ class ModelService:
             model_url = self.hf_urls[model_type]['model']
             temp_path = self.download_file(model_url)
             
-            model = YOLO(temp_path, task="detect")
+            # Load TensorFlow Lite model
+            interpreter = tf.lite.Interpreter(model_path=temp_path)
+            interpreter.allocate_tensors()
             
-            # Cache the model (keep temp file for model to use)
-            self.models_cache[model_type] = model
+            # Cache the interpreter
+            self.models_cache[model_type] = interpreter
             
-            return model
+            return interpreter
         
         except KeyError:
             raise HTTPException(status_code=404, detail=f"Model type '{model_type}' not found")
@@ -182,8 +185,8 @@ class ModelService:
         if model_type not in self.metadata_cache:
             self.metadata_cache[model_type] = self.load_metadata(model_type)
     
-    def get_model(self, model_type: str) -> YOLO:
-        """Get cached model"""
+    def get_model(self, model_type: str) -> tf.Interpreter:
+        """Get cached TensorFlow Lite interpreter"""
         if model_type not in self.models_cache:
             self.initialize_model_resources(model_type)
         return self.models_cache[model_type]

@@ -6,4 +6,5 @@ numpy
 opencv-python
 requests
 pyyaml
-ultralytics
+tensorflow
+python-dotenv
