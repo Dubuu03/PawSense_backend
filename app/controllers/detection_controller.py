@@ -134,32 +134,39 @@ class DetectionController:
             outputs = []
             for i, detail in enumerate(output_details):
                 output = model.get_tensor(detail['index'])
+                # Convert to native Python types for JSON serialization
+                sample_values = output.flatten()[:10]
+                sample_list = [float(x) for x in sample_values]  # Force conversion to Python float
+                
                 outputs.append({
                     "index": i,
-                    "shape": list(output.shape),
+                    "shape": [int(x) for x in output.shape],
                     "dtype": str(output.dtype),
                     "min": float(output.min()),
                     "max": float(output.max()),
                     "mean": float(output.mean()),
-                    "sample_values": output.flatten()[:10].tolist()  # First 10 values
+                    "sample_values": sample_list
                 })
+            
+            # Convert labels to ensure JSON serialization
+            json_labels = {str(k): str(v) for k, v in labels.items()}
             
             debug_info = {
                 "filename": file.filename,
                 "model_type": model_type,
-                "image_size": list(image.size),
+                "image_size": [int(x) for x in image.size],
                 "input_details": [{
-                    "name": detail.get("name", ""),
-                    "shape": list(detail["shape"]),
+                    "name": str(detail.get("name", "")),
+                    "shape": [int(x) for x in detail["shape"]], 
                     "dtype": str(detail["dtype"])
                 } for detail in input_details],
                 "output_details": [{
-                    "name": detail.get("name", ""),
-                    "shape": list(detail["shape"]),
+                    "name": str(detail.get("name", "")),
+                    "shape": [int(x) for x in detail["shape"]],
                     "dtype": str(detail["dtype"])
                 } for detail in output_details],
                 "outputs": outputs,
-                "labels": labels
+                "labels": json_labels
             }
             
             return JSONResponse(content=debug_info)
