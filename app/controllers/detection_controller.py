@@ -6,7 +6,7 @@ from fastapi import File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.models.schemas import DetectionResponse, ErrorResponse, ModelType
-from app.services.detection_service import detection_service
+from app.services.detection_service_fixed import detection_service
 
 
 class DetectionController:
