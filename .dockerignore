@@ -1,11 +1,3 @@
-# Ignore model files in Docker builds (downloaded at runtime)
-models/
-*.tflite
-*.onnx
-*.pt
-*.pth
-*.h5
-*.pkl
 
 # Python cache files
 __pycache__/
