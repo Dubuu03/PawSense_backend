@@ -26,7 +26,7 @@ ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
 # Test basic imports
-RUN python -c "import fastapi, numpy, PIL, tensorflow; print('✅ Core dependencies OK')"
+RUN python -c "import fastapi, numpy, PIL, tflite_runtime; print('✅ Core dependencies OK')"
 
 # Expose port
 EXPOSE 8000

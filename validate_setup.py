@@ -29,9 +29,9 @@ def test_imports():
         import requests
         print("✅ Requests imported successfully")
         
-        # Test TensorFlow import
-        import tensorflow as tf
-        print("✅ TensorFlow imported successfully")
+        # Test TensorFlow Lite Runtime import
+        import tflite_runtime.interpreter as tflite
+        print("✅ TensorFlow Lite Runtime imported successfully")
         
         # Test application modules
         print("\n🔧 Testing application modules...")

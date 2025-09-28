@@ -10,7 +10,7 @@ import requests
 import numpy as np
 from typing import Dict, Any
 from fastapi import HTTPException
-import tensorflow as tf
+import tflite_runtime.interpreter as tflite
 from pathlib import Path
 
 from app.utils.config import config
@@ -132,7 +132,7 @@ class ModelService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error loading metadata: {str(e)}")
     
-    def load_model(self, model_type: str) -> tf.lite.Interpreter:
+    def load_model(self, model_type: str) -> tflite.Interpreter:
         """
         Load TensorFlow Lite model from Hugging Face .tflite file
         
@@ -152,7 +152,7 @@ class ModelService:
             temp_path = self.download_file(model_url)
             
             # Load TensorFlow Lite model
-            interpreter = tf.lite.Interpreter(model_path=temp_path)
+            interpreter = tflite.Interpreter(model_path=temp_path)
             interpreter.allocate_tensors()
             
             # Cache the interpreter
@@ -185,7 +185,7 @@ class ModelService:
         if model_type not in self.metadata_cache:
             self.metadata_cache[model_type] = self.load_metadata(model_type)
     
-    def get_model(self, model_type: str) -> tf.Interpreter:
+    def get_model(self, model_type: str) -> tflite.Interpreter:
         """Get cached TensorFlow Lite interpreter"""
         if model_type not in self.models_cache:
             self.initialize_model_resources(model_type)

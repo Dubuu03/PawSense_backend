@@ -7,7 +7,7 @@ import numpy as np
 from typing import List, Dict, Any
 from PIL import Image
 from fastapi import HTTPException, UploadFile
-import tensorflow as tf
+import tflite_runtime.interpreter as tflite
 
 from app.models.schemas import Detection, DetectionResponse, ModelInfo
 from app.services.model_service import model_service
@@ -38,7 +38,7 @@ class DetectionService:
             raise HTTPException(status_code=400, detail=f"File size too large. Maximum {max_size_mb}MB allowed.")
     
     @staticmethod
-    def run_inference(interpreter: tf.lite.Interpreter, image: Image.Image, labels: Dict[int, str]) -> List[Detection]:
+    def run_inference(interpreter: tflite.Interpreter, image: Image.Image, labels: Dict[int, str]) -> List[Detection]:
         """
         Run TensorFlow Lite inference on an image and format results
         
