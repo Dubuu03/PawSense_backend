@@ -41,7 +41,13 @@ class ModelService:
             Path to downloaded file
         """
         try:
-            response = requests.get(url, timeout=self.download_timeout)
+            # Add headers with Hugging Face authentication
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'application/octet-stream, */*',
+                'Authorization': f'Bearer {config.HF_TOKEN}',
+            }
+            response = requests.get(url, timeout=self.download_timeout, headers=headers, allow_redirects=True)
             response.raise_for_status()
             
             # Create temporary file with appropriate extension

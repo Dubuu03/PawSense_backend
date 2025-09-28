@@ -28,6 +28,9 @@ class Config:
     MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", 10 * 1024 * 1024))  # 10MB
     ALLOWED_FILE_TYPES = os.getenv("ALLOWED_FILE_TYPES", "image/jpeg,image/jpg,image/png,image/bmp,image/tiff").split(",")
     
+    # Hugging Face Configuration
+    HF_TOKEN = os.getenv("HF_TOKEN")
+    
     # Model Configuration
     MODELS_DIR = "models"
     MODEL_CONFIGS = {
