@@ -59,3 +59,16 @@ async def detect_dogs(file: UploadFile = File(..., description="Image file to an
     Returns detection results with bounding boxes, confidence scores, and labels.
     """
     return await detection_controller.detect_dogs(file)
+
+
+@detection_router.post(
+    "/debug/{model_type}",
+    response_class=JSONResponse,
+    summary="Debug Model Output",
+    description="Upload an image to see raw model output for debugging. For development use only.",
+)
+async def debug_model_output(model_type: str, file: UploadFile = File(...)):
+    """
+    Debug endpoint to see raw model output
+    """
+    return await detection_controller.debug_model_output(model_type, file)
